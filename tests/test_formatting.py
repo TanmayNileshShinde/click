@@ -630,3 +630,44 @@ def test_command_write_usage_no_args(runner, command_kwargs, expected_usage_line
     cli = click.Command("cli", **command_kwargs)
     result = runner.invoke(cli, ["--help"])
     assert result.output.splitlines()[0] == expected_usage_line
+
+
+def test_write_usage_does_not_break_options_on_hyphens():
+    """End-to-end regression for #3362: options or arguments containing hyphens
+    in their names should not be split across lines at hyphens.
+    """
+    options = [
+        "--enable-verbose-logging",
+        "--output-file-path",
+        "--max-retry-count",
+        "--disable-cache-mode",
+        "--config-file-location",
+        "--user-auth-token",
+        "--auto-update-interval",
+        "--force-overwrite-existing",
+        "--network-timeout-seconds",
+        "--debug-trace-enabled",
+    ]
+
+    formatter = click.HelpFormatter(width=65)
+    formatter.write_usage("program", " ".join(options))
+    rendered = formatter.getvalue()
+
+    expected = (
+        "Usage: program --enable-verbose-logging --output-file-path\n"
+        "               --max-retry-count --disable-cache-mode\n"
+        "               --config-file-location --user-auth-token\n"
+        "               --auto-update-interval --force-overwrite-existing\n"
+        "               --network-timeout-seconds --debug-trace-enabled\n"
+    )
+    assert rendered == expected
+
+
+def test_wrap_text_break_on_hyphens():
+    text = "here is --very-long-option-name that might break"
+    wrapped_default = click.wrap_text(text, width=30)
+    assert "--very-long-option-\nname" in wrapped_default
+
+    wrapped_no_hyphen_break = click.wrap_text(text, width=30, break_on_hyphens=False)
+    assert "--very-long-option-name" in wrapped_no_hyphen_break
+
